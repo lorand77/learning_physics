@@ -25,22 +25,22 @@ The velocity never changes, so its rate of change is zero. By Newton's 2nd law (
 
 ### 3. Position is a linear function of time
 
-$$x(t) = x_0 + v t$$
+$$x(t) = x_0 + v\thinspace t$$
 
 - $x_0$ is the position at $t = 0$, the starting point.
-- $v t$ is how far the object has moved since then.
+- $v\thinspace t$ is how far the object has moved since then.
 
 This comes from integrating $\dfrac{dx}{dt} = v$:
 
-$$\int_{x_0}^{x} dx' = \int_0^t v dt' \quad\Rightarrow\quad x - x_0 = v t$$
+$$\int_{x_0}^{x} dx' = \int_0^t v\thinspace dt' \quad\Rightarrow\quad x - x_0 = v\thinspace t$$
 
 If the clock starts at some time $t_0$ instead of 0:
 
-$$x(t) = x_0 + v (t - t_0)$$
+$$x(t) = x_0 + v\thinspace(t - t_0)$$
 
 ### 4. Displacement and velocity
 
-$$\Delta x = v \Delta t \qquad\Longleftrightarrow\qquad v = \frac{\Delta x}{\Delta t}$$
+$$\Delta x = v\thinspace\Delta t \qquad\Longleftrightarrow\qquad v = \frac{\Delta x}{\Delta t}$$
 
 When velocity is constant, the **average velocity equals the instantaneous velocity** at every moment. That is why the simple "distance ÷ time" formula is exact here. For non-uniform motion it only gives an average.
 
@@ -49,7 +49,7 @@ When velocity is constant, the **average velocity equals the instantaneous veloc
 | Graph | Shape | What it tells you |
 |---|---|---|
 | $x$ vs $t$ | Straight line | The slope is *v*, and the intercept is $x_0$. A steeper line means faster motion. A downward slope means *v* < 0. |
-| $v$ vs $t$ | Horizontal line at height *v* | The **area under it**, $v \Delta t$, is the displacement Δx. |
+| $v$ vs $t$ | Horizontal line at height *v* | The **area under it**, $v\thinspace\Delta t$, is the displacement Δx. |
 | $a$ vs $t$ | Flat line at 0 | No acceleration. |
 
 ## Worked example
@@ -62,6 +62,6 @@ A car is at $x_0 = 20\text{ m}$ at $t = 0$ and moves at $v = -5\text{ m/s}$ (tow
 
 ## Common pitfalls
 
-- **Distance vs. displacement:** Δx can be negative, but distance traveled is $|v| \Delta t$. In uniform motion the direction never reverses, so distance $= |\Delta x|$.
+- **Distance vs. displacement:** Δx can be negative, but distance traveled is $|v|\thinspace\Delta t$. In uniform motion the direction never reverses, so distance $= |\Delta x|$.
 - **Speed vs. velocity:** speed is $|v|$, and velocity carries a sign.
 - **Uniform vs. uniformly accelerated:** in uniformly accelerated motion it's the *acceleration* that stays constant, not the velocity. That case uses $x = x_0 + v_0 t + \tfrac12 a t^2$. Uniform motion is the special case where $a = 0$.
