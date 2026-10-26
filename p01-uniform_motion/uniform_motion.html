@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uniform Motion Explorer</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #f9fafb;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --grid: #e5e7eb;
+    --line: #2563eb;
+    --line-soft: rgba(37, 99, 235, 0.18);
+    --accent: #ea580c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111827;
+      --panel: #1f2937;
+      --ink: #f3f4f6;
+      --muted: #9ca3af;
+      --grid: #374151;
+      --line: #60a5fa;
+      --line-soft: rgba(96, 165, 250, 0.22);
+      --accent: #fb923c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .panel { background: var(--panel); border: 1px solid var(--grid); border-radius: 10px; padding: 12px; }
+  .graphs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  @media (max-width: 700px) { .graphs { grid-template-columns: 1fr; } }
+  .panel h2 { font-size: 0.95rem; margin: 0 0 4px; font-weight: 600; }
+  .panel p { font-size: 0.85rem; color: var(--muted); margin: 4px 0 0; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 24px; margin-top: 16px; align-items: center; }
+  .control label { display: flex; justify-content: space-between; font-size: 0.9rem; }
+  .control output { font-variant-numeric: tabular-nums; font-weight: 600; }
+  input[type=range] { width: 100%; accent-color: var(--line); }
+  .buttons { display: flex; gap: 8px; }
+  button {
+    font: inherit; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--grid); background: var(--bg); color: var(--ink);
+  }
+  button.primary { background: var(--line); border-color: var(--line); color: #fff; }
+
+  .readout { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 16px; }
+  .readout div { background: var(--panel); border: 1px solid var(--grid); border-radius: 8px; padding: 8px 12px; }
+  .readout span { display: block; font-size: 0.8rem; color: var(--muted); }
+  .readout b { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+
+  /* SVG styling */
+  .axis { stroke: var(--muted); stroke-width: 1; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .tick { fill: var(--muted); font-size: 11px; }
+  .label { fill: var(--ink); font-size: 12px; }
+  .plot { fill: none; stroke: var(--line); stroke-width: 2.5; }
+  .plot-future { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.45; }
+  .guide { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+  .slope { stroke: var(--accent); stroke-width: 1.5; fill: none; }
+  .slope-text { fill: var(--accent); font-size: 12px; }
+  .dot { fill: var(--line); }
+  .ghost { fill: var(--line); opacity: 0.3; }
+  .area { fill: var(--line-soft); }
+  .area-text { fill: var(--line); font-size: 12px; font-weight: 600; }
+  .car-body { fill: var(--line); }
+  .car-wheel { fill: var(--ink); }
+  .arrow { stroke: var(--accent); stroke-width: 2.5; fill: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Uniform motion in 1D</h1>
+  <p class="sub">x(t) = x₀ + v·t. Press play, drag the time slider, or change x₀ and v and see how the motion and both graphs respond.</p>
+
+  <section class="panel">
+    <h2>The motion</h2>
+    <svg id="track" viewBox="0 0 800 130" role="img" aria-label="Car moving along the x axis"></svg>
+    <p>Faint dots mark where the car was at each whole second. They are evenly spaced because the velocity is constant.</p>
+  </section>
+
+  <div class="graphs">
+    <section class="panel">
+      <h2>Position vs time</h2>
+      <svg id="xt" viewBox="0 0 420 300" role="img" aria-label="Position versus time graph"></svg>
+      <p>A straight line. Where it starts on the vertical axis is x₀, and its <b>slope</b> is v.</p>
+    </section>
+    <section class="panel">
+      <h2>Velocity vs time</h2>
+      <svg id="vt" viewBox="0 0 420 300" role="img" aria-label="Velocity versus time graph"></svg>
+      <p>A flat line, since v never changes. The <b>shaded area</b> is the displacement Δx = v·t.</p>
+    </section>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="x0">Starting position x₀ <output id="x0-out"></output></label>
+      <input id="x0" type="range" min="-10" max="10" step="1" value="4">
+    </div>
+    <div class="control">
+      <label for="v">Velocity v <output id="v-out"></output></label>
+      <input id="v" type="range" min="-4" max="4" step="0.5" value="3">
+    </div>
+    <div class="control">
+      <label for="t">Time t <output id="t-out"></output></label>
+      <input id="t" type="range" min="0" max="10" step="0.01" value="0">
+    </div>
+    <div class="buttons">
+      <button id="play" class="primary">▶ Play</button>
+      <button id="reset">↺ Reset</button>
+    </div>
+  </div>
+
+  <div class="readout">
+    <div><span>time t</span><b id="r-t"></b></div>
+    <div><span>position x</span><b id="r-x"></b></div>
+    <div><span>displacement Δx = x − x₀</span><b id="r-dx"></b></div>
+    <div><span>distance traveled |Δx|</span><b id="r-d"></b></div>
+  </div>
+</main>
+
+<script>
+const T_END = 10;            // s
+const X_MIN = -50, X_MAX = 50; // m, wide enough for any slider combination
+const V_MIN = -5, V_MAX = 5;   // m/s
+
+const $ = (id) => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+
+function el(tag, attrs, parent) {
+  const node = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (parent) parent.appendChild(node);
+  return node;
+}
+
+function text(str, attrs, parent) {
+  const node = el("text", attrs, parent);
+  node.textContent = str;
+  return node;
+}
+
+const fmt = (n, digits = 1) => (Math.abs(n) < 0.05 ? 0 : n).toFixed(digits);
+
+const state = { x0: 4, v: 3, t: 0, playing: false };
+const xOf = (t) => state.x0 + state.v * t;
+
+// ---------- Track ----------
+
+const track = $("track");
+const TRACK = { left: 30, right: 770, y: 95 };
+const trackX = (x) => TRACK.left + (x - X_MIN) / (X_MAX - X_MIN) * (TRACK.right - TRACK.left);
+
+el("line", { class: "axis", x1: TRACK.left, x2: TRACK.right, y1: TRACK.y, y2: TRACK.y }, track);
+for (let x = X_MIN; x <= X_MAX; x += 10) {
+  el("line", { class: "axis", x1: trackX(x), x2: trackX(x), y1: TRACK.y - 4, y2: TRACK.y + 4 }, track);
+  text(x, { class: "tick", x: trackX(x), y: TRACK.y + 18, "text-anchor": "middle" }, track);
+}
+text("x (m)", { class: "label", x: TRACK.right + 8, y: TRACK.y + 4 }, track);
+
+const ghosts = el("g", {}, track);
+const startMark = el("line", { class: "guide", y1: 20, y2: TRACK.y }, track);
+const startText = text("x₀", { class: "tick", y: 16, "text-anchor": "middle" }, track);
+
+const car = el("g", {}, track);
+const carShape = el("g", {}, car);
+el("rect", { class: "car-body", x: -18, y: -22, width: 36, height: 12, rx: 3 }, carShape);
+el("path", { class: "car-body", d: "M -10 -22 L -5 -31 L 8 -31 L 13 -22 Z" }, carShape);
+el("circle", { class: "car-wheel", cx: -10, cy: -8, r: 5 }, carShape);
+el("circle", { class: "car-wheel", cx: 10, cy: -8, r: 5 }, carShape);
+
+const arrow = el("g", {}, car);
+const arrowLine = el("line", { class: "arrow", y1: -44, y2: -44 }, arrow);
+const arrowHead = el("path", { class: "arrow" }, arrow);
+const arrowText = text("", { class: "slope-text", y: -52, "text-anchor": "middle" }, arrow);
+
+function drawTrack() {
+  const x = xOf(state.t);
+  car.setAttribute("transform", `translate(${trackX(x)}, ${TRACK.y - 4})`);
+  carShape.setAttribute("transform", state.v < 0 ? "scale(-1, 1)" : "");
+
+  // Velocity arrow, length proportional to v
+  const len = state.v * 10;
+  arrow.style.display = state.v === 0 ? "none" : "";
+  arrowLine.setAttribute("x2", len);
+  const dir = Math.sign(state.v);
+  arrowHead.setAttribute("d", `M ${len + dir * 8} -44 L ${len} -49 L ${len} -39 Z`);
+  arrowText.setAttribute("x", len / 2);
+  arrowText.textContent = `v = ${fmt(state.v)} m/s`;
+
+  startMark.setAttribute("x1", trackX(state.x0));
+  startMark.setAttribute("x2", trackX(state.x0));
+  startText.setAttribute("x", trackX(state.x0));
+
+  ghosts.replaceChildren();
+  for (let k = 0; k <= Math.floor(state.t + 1e-9); k++) {
+    el("circle", { class: "ghost", cx: trackX(xOf(k)), cy: TRACK.y, r: 4 }, ghosts);
+  }
+}
+
+// ---------- Graph helpers ----------
+
+function makeGraph(svg, { yMin, yMax, yStep, yLabel }) {
+  const m = { left: 48, right: 400, top: 16, bottom: 250 };
+  const sx = (t) => m.left + t / T_END * (m.right - m.left);
+  const sy = (y) => m.bottom - (y - yMin) / (yMax - yMin) * (m.bottom - m.top);
+
+  for (let t = 0; t <= T_END; t += 1) {
+    el("line", { class: "gridline", x1: sx(t), x2: sx(t), y1: m.top, y2: m.bottom }, svg);
+    if (t % 2 === 0) text(t, { class: "tick", x: sx(t), y: m.bottom + 16, "text-anchor": "middle" }, svg);
+  }
+  for (let y = yMin; y <= yMax; y += yStep) {
+    el("line", { class: "gridline", x1: m.left, x2: m.right, y1: sy(y), y2: sy(y) }, svg);
+    text(y, { class: "tick", x: m.left - 6, y: sy(y) + 4, "text-anchor": "end" }, svg);
+  }
+  el("line", { class: "axis", x1: m.left, x2: m.right, y1: sy(0), y2: sy(0) }, svg);
+  el("line", { class: "axis", x1: m.left, x2: m.left, y1: m.top, y2: m.bottom }, svg);
+  text("time t (s)", { class: "label", x: (m.left + m.right) / 2, y: m.bottom + 36, "text-anchor": "middle" }, svg);
+  text(yLabel, {
+    class: "label", x: 0, y: 0, "text-anchor": "middle",
+    transform: `translate(12, ${(m.top + m.bottom) / 2}) rotate(-90)`,
+  }, svg);
+
+  return { sx, sy };
+}
+
+// ---------- Position vs time ----------
+
+const xt = $("xt");
+const XT = makeGraph(xt, { yMin: X_MIN, yMax: X_MAX, yStep: 10, yLabel: "position x (m)" });
+
+const slopeGroup = el("g", {}, xt);
+const slopeRun = el("line", { class: "slope" }, slopeGroup);
+const slopeRise = el("line", { class: "slope" }, slopeGroup);
+const slopeRunText = text("Δt = 2 s", { class: "slope-text", "text-anchor": "middle" }, slopeGroup);
+const slopeRiseText = text("", { class: "slope-text" }, slopeGroup);
+
+const xtFuture = el("line", { class: "plot-future" }, xt);
+const xtPast = el("line", { class: "plot" }, xt);
+const xtGhosts = el("g", {}, xt);
+const xtGuideH = el("line", { class: "guide" }, xt);
+const xtGuideV = el("line", { class: "guide" }, xt);
+const xtStart = el("circle", { class: "dot", r: 4 }, xt);
+const xtDot = el("circle", { class: "dot", r: 6 }, xt);
+
+function drawXT() {
+  const { sx, sy } = XT;
+  const x = xOf(state.t);
+
+  xtFuture.setAttribute("x1", sx(0));
+  xtFuture.setAttribute("y1", sy(xOf(0)));
+  xtFuture.setAttribute("x2", sx(T_END));
+  xtFuture.setAttribute("y2", sy(xOf(T_END)));
+
+  xtPast.setAttribute("x1", sx(0));
+  xtPast.setAttribute("y1", sy(xOf(0)));
+  xtPast.setAttribute("x2", sx(state.t));
+  xtPast.setAttribute("y2", sy(x));
+
+  xtGhosts.replaceChildren();
+  for (let k = 0; k <= Math.floor(state.t + 1e-9); k++) {
+    el("circle", { class: "ghost", cx: sx(k), cy: sy(xOf(k)), r: 3 }, xtGhosts);
+  }
+
+  xtGuideH.setAttribute("x1", XT.sx(0));
+  xtGuideH.setAttribute("x2", sx(state.t));
+  xtGuideH.setAttribute("y1", sy(x));
+  xtGuideH.setAttribute("y2", sy(x));
+  xtGuideV.setAttribute("x1", sx(state.t));
+  xtGuideV.setAttribute("x2", sx(state.t));
+  xtGuideV.setAttribute("y1", sy(0));
+  xtGuideV.setAttribute("y2", sy(x));
+
+  xtStart.setAttribute("cx", sx(0));
+  xtStart.setAttribute("cy", sy(state.x0));
+  xtDot.setAttribute("cx", sx(state.t));
+  xtDot.setAttribute("cy", sy(x));
+
+  // Slope triangle between t = 6 s and t = 8 s
+  const t1 = 6, t2 = 8;
+  slopeGroup.style.display = state.v === 0 ? "none" : "";
+  slopeRun.setAttribute("x1", sx(t1));
+  slopeRun.setAttribute("x2", sx(t2));
+  slopeRun.setAttribute("y1", sy(xOf(t1)));
+  slopeRun.setAttribute("y2", sy(xOf(t1)));
+  slopeRise.setAttribute("x1", sx(t2));
+  slopeRise.setAttribute("x2", sx(t2));
+  slopeRise.setAttribute("y1", sy(xOf(t1)));
+  slopeRise.setAttribute("y2", sy(xOf(t2)));
+  const below = state.v > 0 ? 16 : -8;
+  slopeRunText.setAttribute("x", sx((t1 + t2) / 2));
+  slopeRunText.setAttribute("y", sy(xOf(t1)) + below);
+  slopeRiseText.setAttribute("x", sx(t2) + 6);
+  slopeRiseText.setAttribute("y", sy((xOf(t1) + xOf(t2)) / 2) + 4);
+  slopeRiseText.textContent = `Δx = ${fmt(state.v * (t2 - t1))} m`;
+}
+
+// ---------- Velocity vs time ----------
+
+const vt = $("vt");
+const VT = makeGraph(vt, { yMin: V_MIN, yMax: V_MAX, yStep: 1, yLabel: "velocity v (m/s)" });
+
+const vtArea = el("rect", { class: "area" }, vt);
+const vtAreaText = text("", { class: "area-text", "text-anchor": "middle" }, vt);
+const vtFuture = el("line", { class: "plot-future" }, vt);
+const vtPast = el("line", { class: "plot" }, vt);
+const vtDot = el("circle", { class: "dot", r: 6 }, vt);
+
+function drawVT() {
+  const { sx, sy } = VT;
+  const yv = sy(state.v);
+
+  vtFuture.setAttribute("x1", sx(0));
+  vtFuture.setAttribute("x2", sx(T_END));
+  vtFuture.setAttribute("y1", yv);
+  vtFuture.setAttribute("y2", yv);
+  vtPast.setAttribute("x1", sx(0));
+  vtPast.setAttribute("x2", sx(state.t));
+  vtPast.setAttribute("y1", yv);
+  vtPast.setAttribute("y2", yv);
+
+  vtArea.setAttribute("x", sx(0));
+  vtArea.setAttribute("width", sx(state.t) - sx(0));
+  vtArea.setAttribute("y", Math.min(yv, sy(0)));
+  vtArea.setAttribute("height", Math.abs(yv - sy(0)));
+
+  const dx = state.v * state.t;
+  vtAreaText.textContent = `area = v·t = ${fmt(dx)} m`;
+  vtAreaText.setAttribute("x", sx(Math.max(state.t, 3.2) / 2) + 2);
+  vtAreaText.setAttribute("y", state.v >= 0 ? sy(0) + 18 : sy(0) - 8);
+  vtAreaText.style.display = state.t > 0 && state.v !== 0 ? "" : "none";
+
+  vtDot.setAttribute("cx", sx(state.t));
+  vtDot.setAttribute("cy", yv);
+}
+
+// ---------- Controls ----------
+
+function render() {
+  const x = xOf(state.t);
+  const dx = x - state.x0;
+
+  $("x0-out").textContent = `${fmt(state.x0, 0)} m`;
+  $("v-out").textContent = `${fmt(state.v)} m/s`;
+  $("t-out").textContent = `${fmt(state.t)} s`;
+  $("t").value = state.t;
+
+  $("r-t").textContent = `${fmt(state.t)} s`;
+  $("r-x").textContent = `${fmt(x)} m`;
+  $("r-dx").textContent = `${fmt(dx)} m`;
+  $("r-d").textContent = `${fmt(Math.abs(dx))} m`;
+
+  drawTrack();
+  drawXT();
+  drawVT();
+}
+
+function setPlaying(on) {
+  state.playing = on;
+  $("play").textContent = on ? "❚❚ Pause" : "▶ Play";
+  if (on) {
+    if (state.t >= T_END) state.t = 0;
+    lastFrame = null;
+    requestAnimationFrame(tick);
+  }
+}
+
+let lastFrame = null;
+function tick(now) {
+  if (!state.playing) return;
+  if (lastFrame !== null) {
+    state.t = Math.min(T_END, state.t + (now - lastFrame) / 1000);
+  }
+  lastFrame = now;
+  render();
+  if (state.t >= T_END) setPlaying(false);
+  else requestAnimationFrame(tick);
+}
+
+$("play").addEventListener("click", () => setPlaying(!state.playing));
+$("reset").addEventListener("click", () => { setPlaying(false); state.t = 0; render(); });
+$("t").addEventListener("input", (e) => { setPlaying(false); state.t = +e.target.value; render(); });
+$("x0").addEventListener("input", (e) => { state.x0 = +e.target.value; render(); });
+$("v").addEventListener("input", (e) => { state.v = +e.target.value; render(); });
+
+render();
+</script>
+</body>
+</html>
