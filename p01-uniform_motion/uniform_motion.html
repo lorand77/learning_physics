@@ -12,7 +12,6 @@
     --muted: #6b7280;
     --grid: #e5e7eb;
     --line: #2563eb;
-    --line-soft: rgba(37, 99, 235, 0.18);
     --accent: #ea580c;
   }
   @media (prefers-color-scheme: dark) {
@@ -23,7 +22,6 @@
       --muted: #9ca3af;
       --grid: #374151;
       --line: #60a5fa;
-      --line-soft: rgba(96, 165, 250, 0.22);
       --accent: #fb923c;
     }
   }
@@ -72,8 +70,6 @@
   .slope-text { fill: var(--accent); font-size: 12px; }
   .dot { fill: var(--line); }
   .ghost { fill: var(--line); opacity: 0.3; }
-  .area { fill: var(--line-soft); }
-  .area-text { fill: var(--line); font-size: 12px; font-weight: 600; }
   .car-body { fill: var(--line); }
   .car-wheel { fill: var(--ink); }
   .arrow { stroke: var(--accent); stroke-width: 2.5; fill: var(--accent); }
@@ -99,7 +95,7 @@
     <section class="panel">
       <h2>Velocity vs time</h2>
       <svg id="vt" viewBox="0 0 420 300" role="img" aria-label="Velocity versus time graph"></svg>
-      <p>A flat line, since v never changes. The <b>shaded area</b> is the displacement Δx = v·t.</p>
+      <p>A flat line, since v never changes.</p>
     </section>
   </div>
 
@@ -311,8 +307,6 @@ function drawXT() {
 const vt = $("vt");
 const VT = makeGraph(vt, { yMin: V_MIN, yMax: V_MAX, yStep: 1, yLabel: "velocity v (m/s)" });
 
-const vtArea = el("rect", { class: "area" }, vt);
-const vtAreaText = text("", { class: "area-text", "text-anchor": "middle" }, vt);
 const vtFuture = el("line", { class: "plot-future" }, vt);
 const vtPast = el("line", { class: "plot" }, vt);
 const vtDot = el("circle", { class: "dot", r: 6 }, vt);
@@ -329,17 +323,6 @@ function drawVT() {
   vtPast.setAttribute("x2", sx(state.t));
   vtPast.setAttribute("y1", yv);
   vtPast.setAttribute("y2", yv);
-
-  vtArea.setAttribute("x", sx(0));
-  vtArea.setAttribute("width", sx(state.t) - sx(0));
-  vtArea.setAttribute("y", Math.min(yv, sy(0)));
-  vtArea.setAttribute("height", Math.abs(yv - sy(0)));
-
-  const dx = state.v * state.t;
-  vtAreaText.textContent = `area = v·t = ${fmt(dx)} m`;
-  vtAreaText.setAttribute("x", sx(Math.max(state.t, 3.2) / 2) + 2);
-  vtAreaText.setAttribute("y", state.v >= 0 ? sy(0) + 18 : sy(0) - 8);
-  vtAreaText.style.display = state.t > 0 && state.v !== 0 ? "" : "none";
 
   vtDot.setAttribute("cx", sx(state.t));
   vtDot.setAttribute("cy", yv);

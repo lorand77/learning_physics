@@ -53,10 +53,9 @@ A car is at $x_0 = 4\text{ m}$ at $t = 0$ and moves at $v = 3\text{ m/s}$ (towar
 
 ### Velocity vs time
 
-![Velocity vs time for the car: a horizontal line at 3 m/s, with the area from t = 0 to 2 s shaded](v_vs_t.svg)
+![Velocity vs time for the car: a horizontal line at 3 m/s](v_vs_t.svg)
 
 - The graph is a **horizontal line** at height $v$, because velocity doesn't change.
-- The **area** between the line and the time axis is the displacement: $\Delta x = v\thinspace\Delta t$. From $t = 0$ to $2\text{ s}$ that is $(3)(2) = 6\text{ m}$, matching $x$ going from 4 m to 10 m. If $v$ were negative, the line would be below the axis and the area would count as negative.
 
 For an interactive version (an animated car linked to the x–t and v–t graphs, with sliders for $x_0$ and $v$), open [uniform_motion.html](uniform_motion.html) in a browser.
 
