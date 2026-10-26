@@ -70,25 +70,5 @@ def position_graph():
     fig.savefig(OUT / "x_vs_t.svg")
 
 
-def velocity_graph():
-    fig, ax = plt.subplots(figsize=(6.4, 4))
-    ax.plot([0, T_END], [V, V], color=LINE, lw=2)
-    ax.axhline(0, color=MUTED, lw=1)
-    ax.text(T_END - 0.1, V + 0.2, r"$v = 3$ m/s", ha="right", va="bottom")
-
-    # Area between the line and the t-axis from t = 0 to t = 2 s is the displacement
-    t_a = 2
-    ax.fill_between([0, t_a], [V, V], 0, color=LINE, alpha=0.15, lw=0)
-    ax.text(t_a / 2, V / 2, "area $= v\\,\\Delta t = (3)(2)$\n$= 6$ m $= \\Delta x$",
-            ha="center", va="center")
-
-    ax.set(xlim=(0, T_END), ylim=(-1, 5),
-           xlabel="time $t$ (s)", ylabel="velocity $v$ (m/s)",
-           title="Velocity vs time: a horizontal line")
-    fig.tight_layout()
-    fig.savefig(OUT / "v_vs_t.svg")
-
-
 if __name__ == "__main__":
     position_graph()
-    velocity_graph()
