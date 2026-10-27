@@ -67,6 +67,27 @@ A car moves along the x axis while dots trace its position and velocity on the x
 
 The source is [uniform_motion.html](uniform_motion.html), a single file with no dependencies.
 
+## Simulation
+
+A computer doesn't use the formula $x(t) = x_0 + v\thinspace t$ directly. It moves time forward in small steps of $\Delta t$ and updates the position on each step:
+
+```python
+while t < t_end:
+    x = x + v * dt
+    t = t + dt
+```
+
+Each step adds the displacement $v\thinspace\Delta t$ for that small interval.
+
+![Simulated positions for Δt = 0.1 s, all lying exactly on the straight line x = 4 + 3t](simulation.svg)
+
+- Each step moves time forward by $\Delta t$ and the position by $v\thinspace\Delta t$. With $\Delta t = 0.1\text{ s}$ that is 0.3 m per step.
+- For uniform motion the simulated points land **exactly** on the line $x_0 + v\thinspace t$, whatever the size of $\Delta t$. The velocity never changes, so every step adds exactly the right distance. This stops being true once there is acceleration: then a smaller $\Delta t$ gives a more accurate answer.
+
+**[▶ Open the step-by-step simulation](https://lorand77.github.io/learning_physics/p01-uniform_motion/simulation.html)**: step through the loop one $\Delta t$ at a time, see the code with the numbers filled in, and change $\Delta t$.
+
+The plot and the step table are produced by [simulate.py](simulate.py). From the repo root, run `.venv/bin/python p01-uniform_motion/simulate.py`. The interactive page is [simulation.html](simulation.html).
+
 ## Common pitfalls
 
 - **Distance vs. displacement:** Δx can be negative, but distance traveled is $|v|\thinspace\Delta t$. In uniform motion the direction never reverses, so distance $= |\Delta x|$.

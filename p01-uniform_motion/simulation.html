@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uniform Motion Simulation</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #f9fafb;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --grid: #e5e7eb;
+    --line: #2563eb;
+    --accent: #ea580c;
+    --highlight: rgba(234, 88, 12, 0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111827;
+      --panel: #1f2937;
+      --ink: #f3f4f6;
+      --muted: #9ca3af;
+      --grid: #374151;
+      --line: #60a5fa;
+      --accent: #fb923c;
+      --highlight: rgba(251, 146, 60, 0.16);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .panel { background: var(--panel); border: 1px solid var(--grid); border-radius: 10px; padding: 12px; }
+  .panel h2 { font-size: 0.95rem; margin: 0 0 4px; font-weight: 600; }
+  .panel p { font-size: 0.85rem; color: var(--muted); margin: 4px 0 0; }
+  .columns { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; margin-top: 16px; }
+  @media (max-width: 760px) { .columns { grid-template-columns: 1fr; } }
+  .stack { display: grid; gap: 16px; align-content: start; min-width: 0; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 24px; margin-top: 16px; align-items: center; }
+  .control label { display: flex; justify-content: space-between; font-size: 0.9rem; }
+  .control output { font-variant-numeric: tabular-nums; font-weight: 600; }
+  input[type=range] { width: 100%; accent-color: var(--line); }
+  .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+  button {
+    font: inherit; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--grid); background: var(--bg); color: var(--ink);
+  }
+  button.primary { background: var(--line); border-color: var(--line); color: #fff; }
+  button:disabled { opacity: 0.5; cursor: default; }
+
+  pre.code {
+    margin: 0; padding: 10px 12px; border-radius: 8px; overflow-x: auto;
+    background: var(--bg); border: 1px solid var(--grid);
+    font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .code .ln { display: block; padding: 0 4px; border-radius: 4px; }
+  .code .ln.active { background: var(--highlight); }
+  .code .val { color: var(--line); font-weight: 600; }
+  .code .cmt { color: var(--accent); }
+  .code .dim { color: var(--muted); }
+
+  .table-wrap { max-height: 240px; overflow-y: auto; border: 1px solid var(--grid); border-radius: 8px; background: var(--bg); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+  th, td { padding: 3px 10px; text-align: right; }
+  th { position: sticky; top: 0; background: var(--panel); color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--grid); }
+  tr:last-child td { color: var(--accent); font-weight: 600; }
+
+  .readout { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 16px; }
+  .readout div { background: var(--panel); border: 1px solid var(--grid); border-radius: 8px; padding: 8px 12px; }
+  .readout span { display: block; font-size: 0.8rem; color: var(--muted); }
+  .readout b { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+
+  /* SVG styling */
+  .axis { stroke: var(--muted); stroke-width: 1; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .tick { fill: var(--muted); font-size: 11px; }
+  .label { fill: var(--ink); font-size: 12px; }
+  .exact { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .stairs { fill: none; stroke: var(--accent); stroke-width: 1.5; opacity: 0.7; }
+  .last-step { stroke: var(--accent); stroke-width: 3; }
+  .step-text { fill: var(--accent); font-size: 12px; }
+  .pt { fill: var(--accent); }
+  .dot { fill: var(--line); }
+  .ghost { fill: var(--accent); opacity: 0.45; }
+  .car-body { fill: var(--line); }
+  .car-wheel { fill: var(--ink); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Simulating uniform motion</h1>
+  <p class="sub">A computer doesn't solve x(t) = x₀ + v·t directly. It moves time forward in small steps of Δt, and on each step it adds v·Δt to the position. Step through it yourself, then make Δt smaller.</p>
+
+  <section class="panel">
+    <h2>The motion</h2>
+    <svg id="track" viewBox="0 0 800 90" role="img" aria-label="Car moving along the x axis"></svg>
+    <p>Each dot is the position after one step. With constant v every step adds the same distance, so the dots are evenly spaced.</p>
+  </section>
+
+  <div class="controls">
+    <div class="control">
+      <label for="x0">Starting position x₀ <output id="x0-out"></output></label>
+      <input id="x0" type="range" min="-10" max="10" step="1" value="4">
+    </div>
+    <div class="control">
+      <label for="v">Velocity v <output id="v-out"></output></label>
+      <input id="v" type="range" min="-4" max="4" step="0.5" value="3">
+    </div>
+    <div class="control">
+      <label for="dt">Time step Δt <output id="dt-out"></output></label>
+      <input id="dt" type="range" min="0" max="5" step="1" value="0">
+    </div>
+    <div class="buttons">
+      <button id="step">Step +Δt</button>
+      <button id="run" class="primary">▶ Run</button>
+      <button id="reset">↺ Reset</button>
+    </div>
+  </div>
+
+  <div class="columns">
+    <div class="stack">
+      <section class="panel">
+        <h2>Position vs time</h2>
+        <svg id="xt" viewBox="0 0 520 300" role="img" aria-label="Simulated position versus time"></svg>
+        <p>Each step goes Δt to the right and v·Δt up (orange). The dashed line is the exact solution x₀ + v·t. For uniform motion the steps land exactly on it, whatever Δt is.</p>
+      </section>
+    </div>
+    <div class="stack">
+      <section class="panel">
+        <h2>The code</h2>
+        <pre class="code" id="code"></pre>
+      </section>
+      <section class="panel">
+        <h2>Every step</h2>
+        <div class="table-wrap" id="table-wrap">
+          <table>
+            <thead><tr><th>step</th><th>t (s)</th><th>x (m)</th><th>v·Δt (m)</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="readout">
+    <div><span>steps</span><b id="r-n"></b></div>
+    <div><span>time t</span><b id="r-t"></b></div>
+    <div><span>simulated x</span><b id="r-x"></b></div>
+    <div><span>exact x₀ + v·t</span><b id="r-exact"></b></div>
+    <div><span>difference</span><b id="r-err"></b></div>
+  </div>
+</main>
+
+<script>
+const T_END = 10;              // s
+const X_MIN = -50, X_MAX = 50; // m, wide enough for any slider combination
+const DTS = [1, 0.5, 0.25, 0.1, 0.05, 0.01]; // s
+const MAX_DOTS = 100;          // above this many steps, dots would merge into a line
+
+const $ = (id) => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+
+function el(tag, attrs, parent) {
+  const node = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (parent) parent.appendChild(node);
+  return node;
+}
+
+function text(str, attrs, parent) {
+  const node = el("text", attrs, parent);
+  node.textContent = str;
+  return node;
+}
+
+const fmt = (n, digits = 2) => (Math.abs(n) < 0.5 * 10 ** -digits ? 0 : n).toFixed(digits);
+
+const params = { x0: 4, v: 3, dt: 1 };
+let sim;
+let running = false;
+
+const totalSteps = () => Math.round(T_END / params.dt);
+const finished = () => sim.n >= totalSteps();
+const exact = (t) => params.x0 + params.v * t;
+
+// ---------- The simulation ----------
+
+function resetSim() {
+  sim = { t: 0, x: params.x0, n: 0, prev: null, history: [{ t: 0, x: params.x0 }] };
+  $("rows").replaceChildren();
+  addRow();
+}
+
+function step() {
+  if (finished()) return;
+  sim.prev = { t: sim.t, x: sim.x };
+  sim.x = sim.x + params.v * params.dt;
+  sim.t = sim.t + params.dt;
+  sim.n += 1;
+  sim.history.push({ t: sim.t, x: sim.x });
+  addRow();
+}
+
+function addRow() {
+  const tr = document.createElement("tr");
+  const dx = sim.n === 0 ? "" : fmt(params.v * params.dt);
+  for (const cell of [sim.n, fmt(sim.t), fmt(sim.x), dx]) {
+    const td = document.createElement("td");
+    td.textContent = cell;
+    tr.appendChild(td);
+  }
+  $("rows").appendChild(tr);
+}
+
+// ---------- Track ----------
+
+const track = $("track");
+const TRACK = { left: 30, right: 770, y: 62 };
+const trackX = (x) => TRACK.left + (x - X_MIN) / (X_MAX - X_MIN) * (TRACK.right - TRACK.left);
+
+el("line", { class: "axis", x1: TRACK.left, x2: TRACK.right, y1: TRACK.y, y2: TRACK.y }, track);
+for (let x = X_MIN; x <= X_MAX; x += 10) {
+  el("line", { class: "axis", x1: trackX(x), x2: trackX(x), y1: TRACK.y - 4, y2: TRACK.y + 4 }, track);
+  text(x, { class: "tick", x: trackX(x), y: TRACK.y + 18, "text-anchor": "middle" }, track);
+}
+text("x (m)", { class: "label", x: TRACK.right + 8, y: TRACK.y + 4 }, track);
+
+const trackGhosts = el("g", {}, track);
+const car = el("g", {}, track);
+const carShape = el("g", {}, car);
+el("rect", { class: "car-body", x: -18, y: -22, width: 36, height: 12, rx: 3 }, carShape);
+el("path", { class: "car-body", d: "M -10 -22 L -5 -31 L 8 -31 L 13 -22 Z" }, carShape);
+el("circle", { class: "car-wheel", cx: -10, cy: -8, r: 5 }, carShape);
+el("circle", { class: "car-wheel", cx: 10, cy: -8, r: 5 }, carShape);
+
+function drawTrack() {
+  car.setAttribute("transform", `translate(${trackX(sim.x)}, ${TRACK.y - 4})`);
+  carShape.setAttribute("transform", params.v < 0 ? "scale(-1, 1)" : "");
+
+  trackGhosts.replaceChildren();
+  if (totalSteps() <= MAX_DOTS) {
+    for (const p of sim.history) {
+      el("circle", { class: "ghost", cx: trackX(p.x), cy: TRACK.y, r: 3.5 }, trackGhosts);
+    }
+  }
+}
+
+// ---------- Position vs time ----------
+
+const xt = $("xt");
+const M = { left: 48, right: 500, top: 16, bottom: 250 };
+const sx = (t) => M.left + t / T_END * (M.right - M.left);
+const sy = (x) => M.bottom - (x - X_MIN) / (X_MAX - X_MIN) * (M.bottom - M.top);
+
+for (let t = 0; t <= T_END; t += 1) {
+  el("line", { class: "gridline", x1: sx(t), x2: sx(t), y1: M.top, y2: M.bottom }, xt);
+  text(t, { class: "tick", x: sx(t), y: M.bottom + 16, "text-anchor": "middle" }, xt);
+}
+for (let x = X_MIN; x <= X_MAX; x += 10) {
+  el("line", { class: "gridline", x1: M.left, x2: M.right, y1: sy(x), y2: sy(x) }, xt);
+  text(x, { class: "tick", x: M.left - 6, y: sy(x) + 4, "text-anchor": "end" }, xt);
+}
+el("line", { class: "axis", x1: M.left, x2: M.right, y1: sy(0), y2: sy(0) }, xt);
+el("line", { class: "axis", x1: M.left, x2: M.left, y1: M.top, y2: M.bottom }, xt);
+text("time t (s)", { class: "label", x: (M.left + M.right) / 2, y: M.bottom + 36, "text-anchor": "middle" }, xt);
+text("position x (m)", {
+  class: "label", x: 0, y: 0, "text-anchor": "middle",
+  transform: `translate(12, ${(M.top + M.bottom) / 2}) rotate(-90)`,
+}, xt);
+
+const exactLine = el("line", { class: "exact" }, xt);
+const stairs = el("path", { class: "stairs" }, xt);
+const lastRun = el("line", { class: "last-step" }, xt);
+const lastRise = el("line", { class: "last-step" }, xt);
+const lastRunText = text("", { class: "step-text", "text-anchor": "middle" }, xt);
+const lastRiseText = text("", { class: "step-text" }, xt);
+const points = el("g", {}, xt);
+const current = el("circle", { class: "dot", r: 6 }, xt);
+
+function drawGraph() {
+  exactLine.setAttribute("x1", sx(0));
+  exactLine.setAttribute("y1", sy(exact(0)));
+  exactLine.setAttribute("x2", sx(T_END));
+  exactLine.setAttribute("y2", sy(exact(T_END)));
+
+  // Staircase: from each point, across by dt, then up by v*dt
+  let d = `M ${sx(0)} ${sy(params.x0)}`;
+  for (const p of sim.history.slice(1)) d += ` H ${sx(p.t)} V ${sy(p.x)}`;
+  stairs.setAttribute("d", d);
+
+  points.replaceChildren();
+  if (totalSteps() <= MAX_DOTS) {
+    for (const p of sim.history) el("circle", { class: "pt", cx: sx(p.t), cy: sy(p.x), r: 3.5 }, points);
+  }
+
+  // Label the most recent step while stepping slowly enough to read it
+  const showLast = sim.prev !== null && totalSteps() <= 20;
+  for (const node of [lastRun, lastRise, lastRunText, lastRiseText]) node.style.display = showLast ? "" : "none";
+  if (showLast) {
+    const { prev } = sim;
+    lastRun.setAttribute("x1", sx(prev.t));
+    lastRun.setAttribute("x2", sx(sim.t));
+    lastRun.setAttribute("y1", sy(prev.x));
+    lastRun.setAttribute("y2", sy(prev.x));
+    lastRise.setAttribute("x1", sx(sim.t));
+    lastRise.setAttribute("x2", sx(sim.t));
+    lastRise.setAttribute("y1", sy(prev.x));
+    lastRise.setAttribute("y2", sy(sim.x));
+    lastRunText.textContent = `Δt = ${params.dt} s`;
+    lastRunText.setAttribute("x", sx((prev.t + sim.t) / 2));
+    lastRunText.setAttribute("y", sy(prev.x) + (params.v >= 0 ? 16 : -8));
+    lastRiseText.textContent = `v·Δt = ${fmt(params.v * params.dt)} m`;
+    lastRiseText.setAttribute("x", sx(sim.t) + 6);
+    lastRiseText.setAttribute("y", sy((prev.x + sim.x) / 2) + 4);
+  }
+
+  current.setAttribute("cx", sx(sim.t));
+  current.setAttribute("cy", sy(sim.x));
+}
+
+// ---------- Code panel ----------
+
+function drawCode() {
+  const val = (s) => `<span class="val">${s}</span>`;
+  const cmt = (s) => `<span class="cmt">${s}</span>`;
+  const { prev } = sim;
+  const stepped = prev !== null;
+  const v = params.v < 0 ? `(${fmt(params.v, 1)})` : fmt(params.v, 1);
+  const xNote = stepped
+    ? cmt(`# ${fmt(prev.x)} + ${v} × ${params.dt} = ${fmt(sim.x)}`)
+    : `<span class="dim"># press Step</span>`;
+  const tNote = stepped ? cmt(`# ${fmt(prev.t)} + ${params.dt} = ${fmt(sim.t)}`) : "";
+  const active = stepped ? " active" : "";
+
+  $("code").innerHTML = [
+    `<span class="ln">dt = ${val(params.dt)}</span>`,
+    `<span class="ln">v  = ${val(fmt(params.v, 1))}</span>`,
+    `<span class="ln">x  = ${val(params.x0)}</span>`,
+    `<span class="ln">t  = ${val(0)}</span>`,
+    `<span class="ln"> </span>`,
+    `<span class="ln">while t &lt; ${T_END}:</span>`,
+    `<span class="ln${active}">    x = x + v * dt  ${xNote}</span>`,
+    `<span class="ln${active}">    t = t + dt      ${tNote}</span>`,
+  ].join("");
+}
+
+// ---------- Controls ----------
+
+function render() {
+  $("x0-out").textContent = `${params.x0} m`;
+  $("v-out").textContent = `${fmt(params.v, 1)} m/s`;
+  $("dt-out").textContent = `${params.dt} s`;
+
+  $("r-n").textContent = `${sim.n} / ${totalSteps()}`;
+  $("r-t").textContent = `${fmt(sim.t)} s`;
+  $("r-x").textContent = `${fmt(sim.x)} m`;
+  $("r-exact").textContent = `${fmt(exact(sim.t))} m`;
+  $("r-err").textContent = `${fmt(sim.x - exact(sim.t), 3)} m`;
+
+  $("step").disabled = finished();
+  $("run").textContent = running ? "❚❚ Pause" : "▶ Run";
+
+  const wrap = $("table-wrap");
+  wrap.scrollTop = wrap.scrollHeight;
+
+  drawTrack();
+  drawGraph();
+  drawCode();
+}
+
+// Run in real time: one second of simulated time per second on screen
+let lastFrame = null;
+let carry = 0;
+function tick(now) {
+  if (!running) return;
+  if (lastFrame !== null) carry += (now - lastFrame) / 1000;
+  lastFrame = now;
+  while (carry >= params.dt && !finished()) {
+    step();
+    carry -= params.dt;
+  }
+  if (finished()) running = false;
+  render();
+  if (running) requestAnimationFrame(tick);
+}
+
+function setRunning(on) {
+  running = on;
+  if (on) {
+    if (finished()) resetSim();
+    lastFrame = null;
+    carry = params.dt; // take the first step immediately
+    requestAnimationFrame(tick);
+  }
+  render();
+}
+
+function restart() {
+  running = false;
+  resetSim();
+  render();
+}
+
+$("step").addEventListener("click", () => { running = false; step(); render(); });
+$("run").addEventListener("click", () => setRunning(!running));
+$("reset").addEventListener("click", restart);
+$("x0").addEventListener("input", (e) => { params.x0 = +e.target.value; restart(); });
+$("v").addEventListener("input", (e) => { params.v = +e.target.value; restart(); });
+$("dt").addEventListener("input", (e) => { params.dt = DTS[+e.target.value]; restart(); });
+
+resetSim();
+render();
+</script>
+</body>
+</html>
